@@ -5,7 +5,7 @@ It currently only emulates a Digital Pad. A test build is provided under the `bu
 
 This Pi Pico firmware uses the TinyUSB modified host stack to read inputs from Xbox controllers, using tusb_xinput, an implementation of xinput for the Pi Pico. However, this is not perfect. These issues are described below.
 
-It also utilizes the powerful PIO feature of this MCU, to emulate the communication between the PS1/PS2 and the controllers.
+It also utilizes the powerful PIO feature of this MCU, to emulate the communication between the PS1/PS2 and the controllers, based off of the PicoMemcard repo.
 
 This software is delivered as-is, and comes with no warranty. Do not make this mod if you don't have enough experience. I take no resposability for the things you mess up.
 
@@ -40,7 +40,7 @@ More information on the connection of things will be added later.
 
 ### PS1 Digital Pad
 
-This controller, also known as DualDigital, only responds to command `0x01 0x42 ...` (check [references](#references) for more information). That means, that when a PS2 tries to enter config mode `0x01 0x043`, the controller does not acknowledge this, and then the PS2 recognizes it as a Digital Pad.
+This controller, also known as DualDigital, only responds to command `0x01 0x42 ...` (check [references](#references) for more information). That means, that when a PS2 tries to enter config mode `0x01 0x43`, the controller does not acknowledge this, and then the PS2 recognizes it as a Digital Pad.
 
 Here we can see a `0x42` command communication, and the ACK line go low after every (except the last) byte received by the controller.
 
@@ -58,7 +58,7 @@ My favorite method is to use an Xbox 360 USB Breakaway cable, and sand the plast
 
 ### Xbox One Pad initialization
 
-I'm having trouble initializing Xbox One (S, specifically) every time. After plugging it in, nothing happens, USB can't even be used to give it power. You will need a power supply capable of more (milli) amps. The LM7805 should be enough.
+I'm having trouble initializing Xbox One (S, specifically) sometimes. After plugging it in, nothing happens, USB can't even be used to give it power. You will need a power supply capable of more (milli) amps. The LM7805 method should be enough.
 
 ---
 
@@ -66,14 +66,13 @@ I'm having trouble initializing Xbox One (S, specifically) every time. After plu
 
 There are a couple of problems that come with the use of TinyUSB and tusb_xinput.
 
-### USB Hubs
+### USB Hubs  (UPDATE: First working tests)
 
-They currently can't be used. This a big problem because OG Xbox pads present themselves as USB Hubs, and the controller part itself is a device connected to said Hub. This also limits this program to be used ONLY as a single USB device adapter, and my goal is to make it be able to use a Hub, so that you need a single Pico for both PS1/PS2 controller ports.
+After a full day finding what was going wrong, I came to the conclusion that the maximum number of endpoints calculated by the code was missing the number of endpoints that the Xinput driver was "enabling". Therefore only a line of coded needed to be modified and now using USB Hubs and most importantly, the OG Xbox Controller appears to be fully working!
 
-**Possible causes and solutions**
+Not perfectly tho. Because TinyUSB only supports "1 level" of Hubs (we can't connect a Hub to another Hub), and as OG Xbox Controllers are Hubs, we can only plug one directly to the Pico. Other controllers seem to work fine in Hubs.
 
-* If this is a TinyUSB problem, maybe a future update will get things fully working.
-* If this is a tusb_xinput issue, maybe taking a deeper look at the Xinput implementation will get things properly working.
+See details on modification [below](#second-modification)!
 
 ### Time interval between reports
 This could an tusb_xinput issue, and could be a big one, because this time interval is around 8-10ms, which could slow things down for up to a frame, depending on when the button is pressed and when the press is reported.
@@ -86,15 +85,31 @@ This could an tusb_xinput issue, and could be a big one, because this time inter
 
 For both problems, maybe writing a lower lever xinput driver will make things work much better but will be way harder and take much longer to have it finished.
 
+Another option is using a modified version of the [Pico-PIO-USB](https://github.com/sekigon-gonnoc/Pico-PIO-USB) firmware, to have it only support Full Speed Devices, because enabling both LS and FS take almost all 64 (2x32) bytes of available PIO instruction memory. If we only have support for FS devices (all Xbox, 360 and One controllers are FS anyway), the instruction memory might be enough, and we might be able to have a lower level (therefore faster) communication between your Xbox controller and the PS1/PS2. An additional problem might occur, because Pico-PIO-USB uses a 120MHz clock (instead of 125MHz), and a modification to the `psxSPI.pio` (based on 125MHz) file to divide to a proper clock will be necessary. Also, apparently, some USB controllers didn't really want to connnect, such as my Xbox 360 Rock Band Stratocaster Guitar.
+
 ---
+
+##
+
+Videos:
+
+Some videos showcasing properties of this firmware:
+
+<!-- [![Video showcasing pico-ds](https://img.youtube.com/vi/y0nJE96_HKE/0.jpg)](https://www.youtube.com/watch?v=y0nJE96_HKE) -->
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/y0nJE96_HKE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+<!-- [![Gameplay with pico-ds](https://img.youtube.com/vi/pAiFyhjvZcM/0.jpg)](https://www.youtube.com/watch?v=pAiFyhjvZcM) -->
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/pAiFyhjvZcM" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ## Source code notes:
 
-Source code will be released once I reorganize it and get Left Joystick to DPad mapping working, and get some reconnection bugs fixed.
+Source code will be released when I improve data transfers and a cleanup is made.
 
 ### File `psxSPI.pio`
 
-This file has been taken from [PicoMemcard's pmc+ development branch](https://github.com/dangiu/PicoMemcard/blob/pmc%2B/development/psxSPI.pio) and not the main branch, because it seems that it is a bit more stable.
+This file has been based off the [PicoMemcard's pmc+ release branch](https://github.com/dangiu/PicoMemcard/blob/pmc%2B/development/psxSPI.pio), deleting the (currently) unnecessary `dat_reader` program.
 
 ### TinyUSB modified stack
 
@@ -102,9 +117,33 @@ Follow instructions from https://github.com/Ryzee119/tusb_xinput.
 
 Specifically, this commit: https://github.com/Ryzee119/tinyusb/commit/4a61b7ac61c7cfefb80a3abfd0891adf105c545c, tells you to modify files `src/host/usbh.c` and `src/tusb.h` to get things working.
 
+#### Second modification
+
+Locate the `hcd.h` file inside the `/src/host` folder on the `tinyusb` source code.
+
+As of August 14th of 2022, locate line `43` (or somewhere close). It should read something like:
+
+```C
+...
+42 #ifndef CFG_TUH_ENDPOINT_MAX
+43   #define CFG_TUH_ENDPOINT_MAX   (CFG_TUH_HUB + CFG_TUH_HID*2 + CFG_TUH_MSC*2 + CFG_TUH_CDC*3)
+44 //  #ifdef TUP_HCD_ENDPOINT_MAX
+...
+```
+
+and change it to: (multiplying by 2 works because every controller has one for input and one for output, but more research into a specific number might necessary)
+
+```C
+43   #define CFG_TUH_ENDPOINT_MAX   (CFG_TUH_HUB + CFG_TUH_HID*2 + CFG_TUH_MSC*2 + CFG_TUH_CDC*3 + CFG_TUH_XINPUT*2)
+```
+
+and done.
+
 ### The tusb_xinput driver
 
 A custom xinput driver written by Ryzee119 (https://github.com/Ryzee119/tusb_xinput) is used as a base for the currently working version. Further modifications will be requiered to adapt it to this specific case.
+
+As of now, everythings seems to work fine.
 
 ---
 
@@ -118,6 +157,10 @@ Most documentation used is already available online:
   * https://store.curiousinventor.com/guides/PS2
   * https://gist.github.com/scanlime/5042071
   * https://github.com/Lameguy64/PSn00bSDK
+  * https://hackaday.io/project/170365-blueretro/log/186471-playstation-playstation-2-spi-interface
+  * https://problemkaputt.de/psx-spx.htm#controllersandmemorycards
+  * https://psxdatacenter.com/
+
 
 * For information about Xbox/Xbox360/XboxOne USB descriptors and data format:
   * https://github.com/paroj/xpad
@@ -125,7 +168,7 @@ Most documentation used is already available online:
   * https://github.com/medusalix/xone
   * https://github.com/quantus/xbox-one-controller-protocol
 
-* `psxSPI.pio` code taken from PicoMemcard (pmc+/development branch): https://github.com/dangiu/PicoMemcard/tree/pmc+/development
+* `psxSPI.pio` code taken from PicoMemcard (pmc+/release branch): https://github.com/dangiu/PicoMemcard/
 
 * A modified version of TinyUSB (https://github.com/hathach/tinyusb) is used as the host stack for the Pi Pico, [see above](#tinyusb-modified-stack).
 

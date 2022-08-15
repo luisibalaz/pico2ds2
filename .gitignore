@@ -3,6 +3,6 @@ build/*
 !build/pico-ds.uf2
 captured_data
 images
-src
+src/*
 CMakeLists.txt
 pico_sdk_import.cmake
