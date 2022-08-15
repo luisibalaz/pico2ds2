@@ -93,15 +93,11 @@ Another option is using a modified version of the [Pico-PIO-USB](https://github.
 
 Videos:
 
-Some videos showcasing properties of this firmware:
+Some videos showcasing properties of this firmware (click them to open YouTube):
 
-<!-- [![Video showcasing pico-ds](https://img.youtube.com/vi/y0nJE96_HKE/0.jpg)](https://www.youtube.com/watch?v=y0nJE96_HKE) -->
+[![Video showcasing pico-ds](https://img.youtube.com/vi/y0nJE96_HKE/0.jpg)](https://www.youtube.com/watch?v=y0nJE96_HKE)
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/y0nJE96_HKE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-<!-- [![Gameplay with pico-ds](https://img.youtube.com/vi/pAiFyhjvZcM/0.jpg)](https://www.youtube.com/watch?v=pAiFyhjvZcM) -->
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/pAiFyhjvZcM" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![Gameplay with pico-ds](https://img.youtube.com/vi/pAiFyhjvZcM/0.jpg)](https://www.youtube.com/watch?v=pAiFyhjvZcM)
 
 ## Source code notes:
 
